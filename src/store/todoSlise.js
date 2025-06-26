@@ -42,7 +42,7 @@ const todoSlice = createSlice({
       })
       .addCase(fetchTodos.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.todos = action.payload.todos;
+        state.todos = action.payload.data;
         state.totalPages = action.payload.totalPages;
       })
       .addCase(fetchTodos.rejected, (state, action) => {
