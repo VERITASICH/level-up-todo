@@ -15,6 +15,33 @@ export const fetchTodos = createAsyncThunk(
   }
 );
 
+export const addTodo = createAsyncThunk(
+  'todos/addTodo',
+  async (todoText, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`${API_URL}/todos`, {
+        text: todoText,
+        completed: false
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  }
+);
+
+export const deleteTodo = createAsyncThunk(
+  'todos/deleteTodo',
+  async (todoId, { rejectWithValue }) => {
+    try {
+      await axios.delete(`${API_URL}/todos/${todoId}`);
+      return todoId; 
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  }
+);
+
 const todoSlice = createSlice({
   name: 'todo',
   initialState: {
@@ -48,6 +75,30 @@ const todoSlice = createSlice({
       .addCase(fetchTodos.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload || 'Ошибка загрузки задач';
+      })
+      .addCase(addTodo.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+      })
+      .addCase(addTodo.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.todos.unshift(action.payload); 
+      })
+      .addCase(addTodo.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || 'Ошибка при добавлении задачи';
+      })
+      .addCase(deleteTodo.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(deleteTodo.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.todos = state.todos.filter(todo => todo.id !== action.payload);
+      })
+      .addCase(deleteTodo.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload || 'Ошибка при удалении задачи';
       });
   },
 });
