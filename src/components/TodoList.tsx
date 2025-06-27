@@ -1,11 +1,25 @@
 import React, { useEffect } from 'react';
 import { deleteTodo, fetchTodos, setLimit, setPage } from '../store/todoSlise';
-import { useDispatch, useSelector } from 'react-redux';
-import { Pagination, Select, MenuItem, Typography, Box, List, ListItem, Alert, CircularProgress, ListItemText, ListItemSecondaryAction, IconButton } from '@mui/material';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { 
+  Pagination, 
+  Select, 
+  MenuItem, 
+  Typography, 
+  Box, 
+  List, 
+  ListItem, 
+  Alert, 
+  CircularProgress, 
+  ListItemText, 
+  ListItemSecondaryAction, 
+  IconButton,
+  SelectChangeEvent
+} from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-function TodoList() {
-  const dispatch = useDispatch();
+const TodoList: React.FC = () => {
+  const dispatch = useAppDispatch();
   const {
     todos,
     currentPage,
@@ -13,24 +27,21 @@ function TodoList() {
     totalPages,
     isLoading,
     error,
-  } = useSelector((state) => state.todo);
-  useEffect(() => {
-    console.log(todos);
-  }, [todos])
-  useEffect(() => {
-    dispatch(fetchTodos({page: currentPage, limit}));
-  }, [currentPage, limit, dispatch]); 
+  } = useAppSelector((state) => state.todo);
 
-   const handlePageChange = (event, page) => {
+  useEffect(() => {
+    dispatch(fetchTodos({ page: currentPage, limit }));
+  }, [currentPage, limit, dispatch]);
+
+  const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
     dispatch(setPage(page));
   };
 
-   const handleLimitChange = (e) => {
+  const handleLimitChange = (e: SelectChangeEvent<number>) => {
     dispatch(setLimit(Number(e.target.value)));
   };
   
   return (
-    
     <Box sx={{ padding: 3 }}>
       <Typography variant="h4" gutterBottom>
         Список задач
@@ -39,7 +50,11 @@ function TodoList() {
       {/* Выбор количества задач на странице */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
         <Typography>Задач на странице:</Typography>
-        <Select value={limit} onChange={handleLimitChange} size="small">
+        <Select 
+          value={limit} 
+          onChange={handleLimitChange} 
+          size="small"
+        >
           <MenuItem value={5}>5</MenuItem>
           <MenuItem value={10}>10</MenuItem>
         </Select>
@@ -61,21 +76,21 @@ function TodoList() {
 
       {/* Список задач */}
       <List>
-  {todos.map((todo) => (
-    <ListItem key={todo.id}>
-      <ListItemText primary={todo.text} />
-      <ListItemSecondaryAction>
-        <IconButton 
-          edge="end" 
-          aria-label="delete"
-          onClick={() => dispatch(deleteTodo(todo.id))}
-        >
-          <DeleteIcon />
-        </IconButton>
-      </ListItemSecondaryAction>
-    </ListItem>
-  ))}
-</List>
+        {todos.map((todo) => (
+          <ListItem key={todo.id}>
+            <ListItemText primary={todo.text} />
+            <ListItemSecondaryAction>
+              <IconButton 
+                edge="end" 
+                aria-label="delete"
+                onClick={() => dispatch(deleteTodo(todo.id))}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </ListItemSecondaryAction>
+          </ListItem>
+        ))}
+      </List>
 
       {/* Пагинация (если есть задачи) */}
       {todos.length > 0 && (
@@ -97,7 +112,6 @@ function TodoList() {
       )}
     </Box>
   );
-}
+};
 
-export default TodoList
-
+export default TodoList;
