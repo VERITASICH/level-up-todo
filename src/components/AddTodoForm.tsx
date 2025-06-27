@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, FormEvent } from 'react';
 import { useDispatch } from 'react-redux';
-import { addTodo } from '../store/todoSlise'; 
+import { addTodo } from '../store/todoSlise';
 import { TextField, Button, Box } from '@mui/material';
+import { AppDispatch } from '../store/store'; 
 
-function AddTodoForm() {
-  const [todoText, setTodoText] = useState('');
-  const dispatch = useDispatch();
+const AddTodoForm: React.FC = () => {
+  const [todoText, setTodoText] = useState<string>('');
+  const dispatch = useDispatch<AppDispatch>(); 
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (todoText.trim()) {
       dispatch(addTodo(todoText));
@@ -16,13 +17,19 @@ function AddTodoForm() {
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mb: 3 }}>
+    <Box 
+      component="form" 
+      onSubmit={handleSubmit} 
+      sx={{ mb: 3 }}
+    >
       <TextField
         fullWidth
         variant="outlined"
         label="Новая задача"
         value={todoText}
-        onChange={(e) => setTodoText(e.target.value)}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+          setTodoText(e.target.value)
+        }
         sx={{ mr: 2 }}
       />
       <Button 
@@ -34,6 +41,6 @@ function AddTodoForm() {
       </Button>
     </Box>
   );
-}
+};
 
 export default AddTodoForm;
