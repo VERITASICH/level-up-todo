@@ -1,6 +1,6 @@
-import type {  FC } from 'react';
-import AddTodoForm from './components/AddTodoForm';
-import TodoList from './components/TodoList';
+import type { FC } from 'react';
+import { AddTodoForm } from './components/AddTodoForm';
+import { TodoList } from './components/TodoList';
 import { Box } from '@mui/material';
 
 export const App: FC = () => {
@@ -11,4 +11,3 @@ export const App: FC = () => {
     </Box>
   );
 };
-

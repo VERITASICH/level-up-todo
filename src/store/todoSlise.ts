@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import type { PayloadAction } from '@reduxjs/toolkit';import axios from 'axios';
+import type { PayloadAction } from '@reduxjs/toolkit';
+import axios from 'axios';
 
 const API_URL = 'http://localhost:3001';
 
@@ -38,37 +39,30 @@ const initialState: TodoState = {
 };
 
 export const fetchTodos = createAsyncThunk<
-  TodosApiResponse, 
-  FetchTodosParams, 
-  { rejectValue: string } 
->(
-  'todos/fetchTodos',
-  async ({ page, limit }, { rejectWithValue }) => {
-    try {
-      const response = await axios.get<TodosApiResponse>(
-        `${API_URL}/todos?page=${page}&limit=${limit}`
-      );
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        return rejectWithValue(error.response.data);
-      }
-      return rejectWithValue('An unknown error occurred');
-    }
-  }
-);
-
-export const addTodo = createAsyncThunk<
-  Todo, 
-  string, 
+  TodosApiResponse,
+  FetchTodosParams,
   { rejectValue: string }
->(
+>('todos/fetchTodos', async ({ page, limit }, { rejectWithValue }) => {
+  try {
+    const response = await axios.get<TodosApiResponse>(
+      `${API_URL}/todos?page=${page}&limit=${limit}`
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return rejectWithValue(error.response.data);
+    }
+    return rejectWithValue('An unknown error occurred');
+  }
+});
+
+export const addTodo = createAsyncThunk<Todo, string, { rejectValue: string }>(
   'todos/addTodo',
   async (todoText, { rejectWithValue }) => {
     try {
       const response = await axios.post<Todo>(`${API_URL}/todos`, {
         text: todoText,
-        completed: false
+        completed: false,
       });
       return response.data;
     } catch (error) {
@@ -81,23 +75,38 @@ export const addTodo = createAsyncThunk<
 );
 
 export const deleteTodo = createAsyncThunk<
-  number | string, 
-  number | string, 
+  number | string,
+  number | string,
   { rejectValue: string }
->(
-  'todos/deleteTodo',
-  async (todoId, { rejectWithValue }) => {
-    try {
-      await axios.delete(`${API_URL}/todos/${todoId}`);
-      return todoId;
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        return rejectWithValue(error.response.data);
-      }
-      return rejectWithValue('Failed to delete todo');
+>('todos/deleteTodo', async (todoId, { rejectWithValue }) => {
+  try {
+    await axios.delete(`${API_URL}/todos/${todoId}`);
+    return todoId;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return rejectWithValue(error.response.data);
     }
+    return rejectWithValue('Failed to delete todo');
   }
-);
+});
+
+export const toggleTodo = createAsyncThunk<
+  Todo,
+  string | number,
+  { rejectValue: string }
+>('todos/toggleTodo', async (todoId, { rejectWithValue }) => {
+  try {
+    const response = await axios.patch<Todo>(
+      `${API_URL}/todos/${todoId}/toggle`
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return rejectWithValue(error.response.data.error || error.response.data);
+    }
+    return rejectWithValue('Failed to toggle todo status');
+  }
+});
 
 const todoSlice = createSlice({
   name: 'todo',
@@ -118,16 +127,19 @@ const todoSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(fetchTodos.fulfilled, (state, action: PayloadAction<TodosApiResponse>) => {
-        state.isLoading = false;
-        state.todos = action.payload.data;
-        state.totalPages = action.payload.totalPages;
-      })
+      .addCase(
+        fetchTodos.fulfilled,
+        (state, action: PayloadAction<TodosApiResponse>) => {
+          state.isLoading = false;
+          state.todos = action.payload.data;
+          state.totalPages = action.payload.totalPages;
+        }
+      )
       .addCase(fetchTodos.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload || 'Ошибка загрузки задач';
       })
-      
+
       // Обработчики для addTodo
       .addCase(addTodo.pending, (state) => {
         state.isLoading = true;
@@ -141,19 +153,53 @@ const todoSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload || 'Ошибка при добавлении задачи';
       })
-      
+
       // Обработчики для deleteTodo
       .addCase(deleteTodo.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(deleteTodo.fulfilled, (state, action: PayloadAction<string | number>) => {
-        state.isLoading = false;
-        state.todos = state.todos.filter(todo => todo.id !== action.payload);
-      })
+      .addCase(
+        deleteTodo.fulfilled,
+        (state, action: PayloadAction<string | number>) => {
+          state.isLoading = false;
+          state.todos = state.todos.filter(
+            (todo) => todo.id !== action.payload
+          );
+        }
+      )
       .addCase(deleteTodo.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload || 'Ошибка при удалении задачи';
+      })
+
+      // Обработчики для toggleTodo
+      .addCase(toggleTodo.pending, (state, action) => {
+        state.isLoading = true;
+        state.error = null;
+        // Оптимистичное обновление
+        const todo = state.todos.find((t) => t.id === action.meta.arg);
+        if (todo) {
+          todo.completed = !todo.completed;
+        }
+      })
+      .addCase(toggleTodo.fulfilled, (state, action: PayloadAction<Todo>) => {
+        state.isLoading = false;
+        const index = state.todos.findIndex(
+          (todo) => todo.id === action.payload.id
+        );
+        if (index !== -1) {
+          state.todos[index] = action.payload;
+        }
+      })
+      .addCase(toggleTodo.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload || 'Ошибка при изменении статуса задачи';
+        // Откат оптимистичного обновления
+        const todo = state.todos.find((t) => t.id === action.meta.arg);
+        if (todo) {
+          todo.completed = !todo.completed;
+        }
       });
   },
 });

@@ -1,6 +1,6 @@
-import { configureStore } from "@reduxjs/toolkit";
-import todoReducer, { type TodoState } from './todoSlise';
-
+import { configureStore } from '@reduxjs/toolkit';
+import type { TodoState } from './todoSlise';
+import todoReducer from './todoSlise';
 
 export interface RootState {
   todo: TodoState;

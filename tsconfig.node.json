@@ -19,7 +19,12 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* Добавьте эти опции для поддержки Node.js */
+    "types": ["node"], // Разрешает Node.js глобальные типы
+    "moduleResolution": "node", // Важно для правильного разрешения Node.js модулей
+    "esModuleInterop": true // Для совместимости с CommonJS
   },
   "include": ["vite.config.ts"]
 }
