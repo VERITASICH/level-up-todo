@@ -27,8 +27,10 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import { ToastContainer } from 'react-toastify';
 
 export const TodoList: FC = () => {
+  console.log(localStorage);
   const dispatch = useAppDispatch();
   const { todos, currentPage, limit, totalPages, isLoading, error } =
     useAppSelector((state) => state.todo);
@@ -54,6 +56,7 @@ export const TodoList: FC = () => {
 
   return (
     <Box sx={{ padding: 3 }}>
+      <ToastContainer />
       <Typography variant="h4" gutterBottom>
         Список задач
       </Typography>

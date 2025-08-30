@@ -1,33 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:3001';
-
-interface Todo {
-  id: string | number;
-  text: string;
-  completed: boolean;
-}
-
-interface TodosApiResponse {
-  data: Todo[];
-  totalPages: number;
-}
-
-interface FetchTodosParams {
-  page: number;
-  limit: number;
-}
-
-interface TodoState {
-  todos: Todo[];
-  currentPage: number;
-  limit: number;
-  totalPages: number;
-  isLoading: boolean;
-  error: string | null;
-}
+import { toast } from 'react-toastify';
+import type { Todo, TodoState, TodosApiResponse, FetchTodosParams } from '@/types';
+import { todosAPI } from '@/api/todosAPI';
 
 const initialState: TodoState = {
   todos: [],
@@ -44,12 +19,17 @@ export const fetchTodos = createAsyncThunk<
   { rejectValue: string }
 >('todos/fetchTodos', async ({ page, limit }, { rejectWithValue }) => {
   try {
-    const response = await axios.get<TodosApiResponse>(
-      `${API_URL}/todos?page=${page}&limit=${limit}`
-    );
+    const response = await todosAPI.getTodos({ page, limit });    
+    // Validate response structure
+    if (!response.data) {
+      console.error('No data in response');
+      return rejectWithValue('Invalid response structure');
+    }
+    
     return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response) {
+  } catch (error: any) {
+    console.error('Error fetching todos:', error);
+    if (error.response) {
       return rejectWithValue(error.response.data);
     }
     return rejectWithValue('An unknown error occurred');
@@ -60,13 +40,13 @@ export const addTodo = createAsyncThunk<Todo, string, { rejectValue: string }>(
   'todos/addTodo',
   async (todoText, { rejectWithValue }) => {
     try {
-      const response = await axios.post<Todo>(`${API_URL}/todos`, {
-        text: todoText,
-        completed: false,
-      });
+      const response = await todosAPI.createTodo(todoText);
+      if (!response.data) {
+        return rejectWithValue('Invalid response structure');
+      }
       return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
+    } catch (error: any) {
+      if (error.response) {
         return rejectWithValue(error.response.data);
       }
       return rejectWithValue('Failed to add todo');
@@ -80,10 +60,10 @@ export const deleteTodo = createAsyncThunk<
   { rejectValue: string }
 >('todos/deleteTodo', async (todoId, { rejectWithValue }) => {
   try {
-    await axios.delete(`${API_URL}/todos/${todoId}`);
+    await todosAPI.deleteTodo(todoId);
     return todoId;
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response) {
+  } catch (error: any) {
+    if (error.response) {
       return rejectWithValue(error.response.data);
     }
     return rejectWithValue('Failed to delete todo');
@@ -96,12 +76,10 @@ export const toggleTodo = createAsyncThunk<
   { rejectValue: string }
 >('todos/toggleTodo', async (todoId, { rejectWithValue }) => {
   try {
-    const response = await axios.patch<Todo>(
-      `${API_URL}/todos/${todoId}/toggle`
-    );
+    const response = await todosAPI.toggleTodo(todoId);
     return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response) {
+  } catch (error: any) {
+    if (error.response) {
       return rejectWithValue(error.response.data.error || error.response.data);
     }
     return rejectWithValue('Failed to toggle todo status');
@@ -131,9 +109,35 @@ const todoSlice = createSlice({
         fetchTodos.fulfilled,
         (state, action: PayloadAction<TodosApiResponse>) => {
           state.isLoading = false;
-          state.todos = action.payload.data;
-          state.totalPages = action.payload.totalPages;
-        }
+          
+          // Safety check for response structure
+          if (!action.payload) {
+            console.error('No payload received in fetchTodos.fulfilled');
+            state.todos = [];
+            state.totalPages = 1;
+            return;
+          }
+          
+          // Handle todos data safely
+          if (Array.isArray(action.payload.data)) {
+            state.todos = action.payload.data;
+          } else if (Array.isArray(action.payload)) {
+            // Fallback: if payload is directly an array
+            state.todos = action.payload;
+          } else {
+            console.warn('Unexpected todos data structure:', action.payload);
+            state.todos = [];
+          }
+          
+          // Handle pagination safely
+          if (action.payload.pagination && typeof action.payload.pagination.totalPages === 'number') {
+            state.totalPages = action.payload.pagination.totalPages;
+          } else {
+            // Default to 1 page if no pagination info
+            state.totalPages = 1;
+          }
+          
+          }
       )
       .addCase(fetchTodos.rejected, (state, action) => {
         state.isLoading = false;
@@ -166,6 +170,15 @@ const todoSlice = createSlice({
           state.todos = state.todos.filter(
             (todo) => todo.id !== action.payload
           );
+          toast.success('Задача успешно удалена!', {
+            position: 'top-right',
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
         }
       )
       .addCase(deleteTodo.rejected, (state, action) => {
@@ -205,6 +218,4 @@ const todoSlice = createSlice({
 });
 
 export const { setPage, setLimit } = todoSlice.actions;
-export type { Todo, TodoState };
-export type { FetchTodosParams, TodosApiResponse };
 export default todoSlice.reducer;
