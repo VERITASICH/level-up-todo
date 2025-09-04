@@ -20,6 +20,8 @@ export const fetchTodos = createAsyncThunk<
 >('todos/fetchTodos', async ({ page, limit }, { rejectWithValue }) => {
   try {
     const response = await todosAPI.getTodos({ page, limit });    
+    console.log('API Response:', response.data); // Debug log
+    
     // Validate response structure
     if (!response.data) {
       console.error('No data in response');
@@ -118,24 +120,59 @@ const todoSlice = createSlice({
             return;
           }
           
-          // Handle todos data safely
-          if (Array.isArray(action.payload.data)) {
-            state.todos = action.payload.data;
-          } else if (Array.isArray(action.payload)) {
+          // Handle todos data safely - try multiple possible structures
+          const payload = action.payload as any; // Use any to handle different response structures
+          
+          if (Array.isArray(payload.data)) {
+            // Expected structure: { data: [], pagination: {} }
+            state.todos = payload.data;
+          } else if (Array.isArray(payload.todos)) {
+            // Alternative structure: { todos: [], totalPages: 5 }
+            state.todos = payload.todos;
+          } else if (Array.isArray(payload)) {
             // Fallback: if payload is directly an array
-            state.todos = action.payload;
+            state.todos = payload;
           } else {
-            console.warn('Unexpected todos data structure:', action.payload);
+            console.warn('Unexpected todos data structure:', payload);
             state.todos = [];
           }
           
-          // Handle pagination safely
-          if (action.payload.pagination && typeof action.payload.pagination.totalPages === 'number') {
-            state.totalPages = action.payload.pagination.totalPages;
+          // Handle pagination safely - try multiple possible structures
+          console.log('Full payload:', payload); // Debug log
+          console.log('Pagination data:', payload.pagination); // Debug log
+          
+          let totalPages = 1; // Default
+          
+          // Try different possible pagination structures
+          if (payload.pagination && typeof payload.pagination.totalPages === 'number') {
+            // Expected structure: { pagination: { totalPages: 5 } }
+            totalPages = payload.pagination.totalPages;
+            console.log('Found totalPages in pagination:', totalPages);
+          } else if (typeof payload.totalPages === 'number') {
+            // Alternative structure: { totalPages: 5 }
+            totalPages = payload.totalPages;
+            console.log('Found totalPages at root level:', totalPages);
+          } else if (payload.pagination && typeof payload.pagination.total === 'number' && state.limit > 0) {
+            // Calculate from total count: { pagination: { total: 25 } }
+            totalPages = Math.ceil(payload.pagination.total / state.limit);
+            console.log('Calculated totalPages from total count:', totalPages);
+          } else if (typeof payload.total === 'number' && state.limit > 0) {
+            // Calculate from total count at root: { total: 25 }
+            totalPages = Math.ceil(payload.total / state.limit);
+            console.log('Calculated totalPages from root total:', totalPages);
           } else {
-            // Default to 1 page if no pagination info
-            state.totalPages = 1;
+            // Last resort: if we have todos and they fill the current page, assume there might be more
+            if (state.todos.length === state.limit) {
+              totalPages = state.currentPage + 1; // Assume there's at least one more page
+              console.log('No pagination info, assuming more pages based on current page size');
+            } else {
+              totalPages = state.currentPage; // Current page is the last page
+              console.log('No pagination info, current page appears to be the last');
+            }
           }
+          
+          state.totalPages = totalPages;
+          console.log('Final totalPages set to:', state.totalPages);
           
           }
       )

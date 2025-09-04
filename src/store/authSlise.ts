@@ -5,7 +5,6 @@ import type {
   ChangePasswordData,
   LoginCredentials,
   RegisterData,
-  User,
   AuthState,
 } from '@/types';
 import { tokenStorage } from '@/utils/auth';
@@ -20,7 +19,7 @@ export const initialState: AuthState = {
 
 export const registerUser = createAsyncThunk(
   'auth/register',
-  async (userData: RegisterData, { rejectWithValue, dispatch }) => {
+  async (userData: RegisterData, { rejectWithValue }) => {
     try {
       const response = await authAPI.register(userData);
       const { accessToken, refreshToken } = response.data;
@@ -114,6 +113,10 @@ export const authSlice = createSlice({
       state.isAuthenticated = false;
       tokenStorage.clearTokens();
     },
+    updateTokens: (state, action: PayloadAction<{ token: string }>) => {
+      state.token = action.payload.token;
+      state.isAuthenticated = true;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -183,5 +186,5 @@ export const authSlice = createSlice({
   },
 });
 
-export const { clearError, logout } = authSlice.actions;
+export const { clearError, logout, updateTokens } = authSlice.actions;
 export default authSlice.reducer;

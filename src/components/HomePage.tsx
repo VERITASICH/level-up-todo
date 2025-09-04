@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector, useAuth } from '@/store/hooks';
-import { fetchTodos, setPage, setLimit } from '@/store/todoSlise';
+import { fetchTodos } from '@/store/todoSlise';
 import { TodoList } from './TodoList';
-import { Box, Typography, Button, CircularProgress } from '@mui/material';
+import { Box, Typography, Button } from '@mui/material';
 
 export const HomePage = () => {
   const dispatch = useAppDispatch();
-  const { todos, currentPage, limit, totalPages, isLoading, error } = useAppSelector(
+  const { todos, currentPage, limit, isLoading, error } = useAppSelector(
     (state) => state.todo
   );
   const { isAuthenticated } = useAuth();
@@ -23,13 +23,6 @@ export const HomePage = () => {
     return null;
   }
 
-  const handlePageChange = (page: number) => {
-    dispatch(setPage(page));
-  };
-
-  const handleLimitChange = (newLimit: number) => {
-    dispatch(setLimit(newLimit));
-  };
 
   if (isLoading && todos.length === 0) {
     return (

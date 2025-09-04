@@ -28,6 +28,9 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Track refresh token promise to prevent multiple simultaneous refresh attempts
+let refreshTokenPromise: Promise<any> | null = null;
+
 // Интерцептор для обработки ошибок
 api.interceptors.response.use(
   (response) => response,
@@ -37,31 +40,74 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
+      // If there's already a refresh in progress, wait for it
+      if (refreshTokenPromise) {
+        try {
+          await refreshTokenPromise;
+          // Retry the original request with the new token
+          const newToken = tokenStorage.getAccessToken();
+          if (newToken) {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return api(originalRequest);
+          }
+        } catch (refreshError) {
+          // If the refresh failed, proceed to logout
+          tokenStorage.clearTokens();
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('auth:logout'));
+          }
+          return Promise.reject(refreshError);
+        }
+      }
+
       try {
         const refreshToken = tokenStorage.getRefreshToken();
         if (!refreshToken) {
-          throw new Error('No refresh token');
+          throw new Error('No refresh token available');
         }
 
-        const response = await axios.post(`${API_URL}/auth/refresh`, {
-          refreshToken,
+        console.log('Attempting to refresh access token...');
+        
+        // Create refresh promise and store it
+        refreshTokenPromise = api.post('/auth/refresh', {
+          refreshToken: refreshToken,
         });
 
+        const response = await refreshTokenPromise;
         const { accessToken: newToken, refreshToken: newRefreshToken } = response.data;
 
+        // Update tokens in storage
         tokenStorage.setTokens(newToken, newRefreshToken);
 
+        // Update Redux state by dispatching a custom event
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('auth:tokenRefreshed', {
+            detail: { accessToken: newToken, refreshToken: newRefreshToken }
+          }));
+        }
+
+        console.log('Access token refreshed successfully');
+
+        // Clear the refresh promise
+        refreshTokenPromise = null;
+
+        // Retry the original request with the new token
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
       } catch (refreshError) {
-        // Clear tokens and redirect to login
-        tokenStorage.clearTokens();
+        console.error('Token refresh failed:', refreshError);
         
-        // Dispatch logout action if we're in a Redux context
+        // Clear the refresh promise
+        refreshTokenPromise = null;
+        
+        // Clear tokens and logout
+        tokenStorage.clearTokens();
+
+        // Dispatch logout event to update Redux state
         if (typeof window !== 'undefined' && window.dispatchEvent) {
           window.dispatchEvent(new CustomEvent('auth:logout'));
         }
-        
+
         return Promise.reject(refreshError);
       }
     }
@@ -71,19 +117,18 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
-  register: (userData: RegisterData) => 
+  register: (userData: RegisterData) =>
     api.post<AuthResponse>('/auth/register', userData),
 
-  login: (credentials: LoginCredentials) => 
+  login: (credentials: LoginCredentials) =>
     api.post<AuthResponse>('/auth/login', credentials),
 
-  getProfile: () => 
-    api.get<User>('/auth/me'),
+  getProfile: () => api.get<User>('/auth/me'),
 
-  changePassword: (passwords: ChangePasswordData) => 
+  changePassword: (passwords: ChangePasswordData) =>
     api.post('/auth/change-password', passwords),
 
-  refreshToken: (refreshToken: string) => 
+  refreshToken: (refreshToken: string) =>
     api.post<AuthResponse>('/auth/refresh', { refreshToken }),
 
   logout: () => {
@@ -91,4 +136,3 @@ export const authAPI = {
     return Promise.resolve();
   },
 };
-

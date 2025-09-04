@@ -28,7 +28,11 @@ export const AddTodoForm: React.FC = () => {
 
   return (
     <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-      <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}
+      >
         <ToastContainer />
         <TextField
           fullWidth
@@ -40,9 +44,9 @@ export const AddTodoForm: React.FC = () => {
           variant="outlined"
           size="medium"
         />
-        <Button 
-          type="submit" 
-          variant="contained" 
+        <Button
+          type="submit"
+          variant="contained"
           size="large"
           sx={{ minWidth: '120px' }}
         >
