@@ -1,8 +1,6 @@
-import { useEffect } from 'react';
 import type { FC } from 'react';
 import {
   deleteTodo,
-  fetchTodos,
   setLimit,
   setPage,
   toggleTodo,
@@ -21,7 +19,6 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   IconButton,
-  Checkbox,
   type SelectChangeEvent,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -30,17 +27,18 @@ import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import { ToastContainer } from 'react-toastify';
 
 export const TodoList: FC = () => {
-  console.log(localStorage);
   const dispatch = useAppDispatch();
   const { todos, currentPage, limit, totalPages, isLoading, error } =
     useAppSelector((state) => state.todo);
 
-  useEffect(() => {
-    dispatch(fetchTodos({ page: currentPage, limit }));
-  }, [currentPage, limit, dispatch]);
+  // Debug log to see pagination values
+  console.log('TodoList pagination state:', { currentPage, limit, totalPages, todosCount: todos.length });
+
+  // Note: Initial data fetching is handled by HomePage component
+  // This component only handles pagination changes
 
   const handlePageChange = (
-    event: React.ChangeEvent<unknown>,
+    _event: React.ChangeEvent<unknown>,
     page: number
   ) => {
     dispatch(setPage(page));
@@ -134,7 +132,7 @@ export const TodoList: FC = () => {
         <>
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
             <Pagination
-              count={totalPages}
+              count={Math.max(totalPages, 1)}
               page={currentPage}
               onChange={handlePageChange}
               color="primary"
@@ -143,7 +141,7 @@ export const TodoList: FC = () => {
             />
           </Box>
           <Typography sx={{ textAlign: 'center', mt: 1 }}>
-            Страница {currentPage} из {totalPages}
+            Страница {currentPage} из {Math.max(totalPages, 1)}
           </Typography>
         </>
       )}

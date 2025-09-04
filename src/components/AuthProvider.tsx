@@ -12,7 +12,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    // Check if user has a token and validate it on app start
+    // Проверка, есть ли у пользователя токен, и подтверждение его при запуске приложения.
     const token = tokenStorage.getAccessToken();
     if (token && !tokenStorage.isTokenExpired(token)) {
       dispatch(fetchUserProfile());
